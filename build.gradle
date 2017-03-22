@@ -1,0 +1,109 @@
+// build.gradle (master)
+
+/*
+ * Applying top-level java plugin but the root project is not really a java project,
+ * its sub projects are java library projects. This is configured so that eclipse
+ * can generate a single-project view from the root baseline.
+ */
+apply plugin : 'java'
+
+group = 'kkdt'
+version = '0.1'
+description = "Various useful Gradle tasks"
+
+ext {
+   projectLib = file(rootProject.projectDir.path + '/lib')
+   localLib = projectLib
+}
+
+allprojects {
+   apply plugin : 'eclipse'
+
+   repositories {
+      jcenter()
+   }
+
+   task info(description:'Use information about project (' + project.name + ')') {
+      doLast {
+         // https://docs.gradle.org/current/dsl/org.gradle.api.Project.html
+         println '-----> user.home               : ' + System.properties['user.home']
+         println '-----> project.name            : ' + project.name
+         println '-----> project.version         : ' + project.version
+         println '-----> project.projectDir      : ' + project.projectDir
+         println '-----> project.buildDir        : ' + project.buildDir
+         // not indented for visual formatting
+         if(project.plugins.hasPlugin('java')) {
+         println '-----> (java) archivesBaseName : ' + archivesBaseName
+         println '-----> (java) jar.archivePath  : ' + jar.archivePath
+         println '-----> (java) libsDir          : ' + libsDir
+         println '-----> (java) libsDirName      : ' + libsDirName
+         println '-----> (java) distsDir         : ' + distsDir
+         println '-----> (java) distsDirName     : ' + distsDirName
+         }
+      }
+   }
+   
+   task cleanAll(description:'Clean all custom artifacts', dependsOn:['clean']) {
+      doLast {
+         delete jar.archivePath
+      }
+   }
+}
+
+subprojects {
+   apply plugin: 'eclipse'
+
+   eclipse {
+      classpath {
+         downloadSources = true
+      }
+   }
+
+   // Define eclipse-specific configurations so that root project knows to
+   // process them during eclipse plugin tasks
+   configurations {
+      eclipseLibs {
+         description 'All library dependencies for subproject'
+      }
+
+      eclipseSources {
+         description 'All source directories for subproject'
+      }
+   }
+}
+
+eclipse {
+   classpath {
+      file.whenMerged { classpath ->
+         // subproject jar files will be ignored
+         def archives = subprojects.findAll { project ->
+            project.plugins.hasPlugin('java') && project.name != rootProject.name
+         }.collect { project ->
+            project.jar.archivePath
+         }.collect() as Set
+
+         subprojects.findAll { project ->
+            project.plugins.hasPlugin('java') && project.name != rootProject.name
+         }.collect { project ->
+            project.configurations.eclipseSources.each {
+               def src = new org.gradle.plugins.ide.eclipse.model.SourceFolder(rootProject.relativePath(it.absolutePath), null)
+               classpath.entries += src
+            }
+         }
+
+         subprojects.findAll { project ->
+            project.plugins.hasPlugin('java') && project.name != rootProject.name
+         }.collect { project ->
+            project.configurations.eclipseLibs.each {
+               def fileRef = fileReference(it)
+               def lib = new org.gradle.plugins.ide.eclipse.model.Library(fileRef)
+               lib.exported = true
+
+               if(!classpath.entries.contains(lib) && !archives.contains(fileRef.file)) {
+                  classpath.entries += lib
+               }
+            }
+         }
+      }
+   }
+}

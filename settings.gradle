@@ -1,0 +1,20 @@
+include 'modules:common'
+rootProject.name = 'gradle-java-simple'
+
+/**
+ * Recursively configure subproject(s) gradle build file with the appropriate
+ * filename.
+ */
+def configureGradleBuildFile(project) {
+   if(project.children.size() > 0) {
+      project.children.each {
+         configureGradleBuildFile(it)
+      }
+   }
+   project.buildFileName = project.name + ".gradle"
+}
+
+// do configuration
+rootProject.children.each { project ->
+   configureGradleBuildFile(project)
+}

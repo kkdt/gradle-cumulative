@@ -1,0 +1,81 @@
+// modules.gradle
+
+description = "Multiple modules/projects build"
+
+subprojects {
+   apply plugin: 'java'
+   apply plugin: 'maven'
+   
+   group = 'kkdt'
+
+   sourceCompatibility = 1.8
+   targetCompatibility = 1.8
+
+   ext {
+      localLib = projectLib
+      sharedManifest = manifest {
+         attributes('Implementation-Title': 'kkdt-boot',
+           'Implementation-Version': version,
+           'Main-Class':'kkdt.boot.StandardApplicationRunner')
+      }
+   }
+   
+   // override jar task from java plugin
+   jar {
+      destinationDir = localLib
+      manifest = project.manifest {
+         from sharedManifest
+      }
+   }
+
+   repositories {
+      jcenter()
+      maven {
+         url "http://repo.maven.apache.org/maven2"
+      }
+   }
+
+   dependencies {
+      compile("org.springframework.boot:spring-boot:1.3.3.RELEASE")
+
+      testCompile ('org.springframework.boot:spring-boot-starter-web:1.3.3.RELEASE') {
+         exclude module: 'spring-boot-starter-logging'
+         exclude module: 'spring-boot-starter-log4j'
+         exclude module: 'logback-classic'
+      }
+      testCompile 'junit:junit:4.12'
+      testCompile 'org.springframework.boot:spring-boot-starter-test:1.3.3.RELEASE'
+      testCompile 'log4j:log4j:1.2.17'
+
+      // include not only compile but also test classpath for eclipse
+      eclipseLibs configurations.testCompileClasspath
+
+      // gather up all source files for each subproject
+      eclipseSources files(sourceSets.collect().collect {
+         it.java.srcDirs
+      })
+   }
+
+   task jarTests(type : Jar, dependsOn:['test'], description:'Jar all test artifacts') {
+      from sourceSets.test.output
+      classifier "tests"
+      destinationDir = localLib
+      manifest = project.manifest {
+         from sharedManifest
+      }
+   }
+
+   task jarAll(type : Jar, dependsOn:['test'], description:'Jar both source and test artifacts') {
+      from sourceSets.test.output
+      from sourceSets.main.output
+      classifier "all"
+      destinationDir = localLib
+      manifest = project.manifest {
+         from sharedManifest
+      }
+   }
+}
+
+task clean(description:'Non-Java plugin clean') {
+   
+}
