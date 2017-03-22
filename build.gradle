@@ -16,8 +16,18 @@ ext {
    localLib = projectLib
 }
 
+jar {
+   destinationDir = localLib
+}
+
 allprojects {
    apply plugin : 'eclipse'
+   
+   eclipse {
+      classpath {
+         downloadSources = true
+      }
+   }
 
    repositories {
       jcenter()
@@ -51,14 +61,6 @@ allprojects {
 }
 
 subprojects {
-   apply plugin: 'eclipse'
-
-   eclipse {
-      classpath {
-         downloadSources = true
-      }
-   }
-
    // Define eclipse-specific configurations so that root project knows to
    // process them during eclipse plugin tasks
    configurations {
@@ -86,8 +88,10 @@ eclipse {
             project.plugins.hasPlugin('java') && project.name != rootProject.name
          }.collect { project ->
             project.configurations.eclipseSources.each {
-               def src = new org.gradle.plugins.ide.eclipse.model.SourceFolder(rootProject.relativePath(it.absolutePath), null)
-               classpath.entries += src
+               if(file(it).exists()) {
+                  def src = new org.gradle.plugins.ide.eclipse.model.SourceFolder(rootProject.relativePath(it.absolutePath), null)
+                  classpath.entries += src
+               }
             }
          }
 

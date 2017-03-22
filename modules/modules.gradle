@@ -27,7 +27,7 @@ subprojects {
          from sharedManifest
       }
    }
-
+   
    repositories {
       jcenter()
       maven {
@@ -52,12 +52,13 @@ subprojects {
 
       // gather up all source files for each subproject
       eclipseSources files(sourceSets.collect().collect {
-         it.java.srcDirs
+         it.java.srcDirs + it.resources.srcDirs
       })
    }
 
-   task jarTests(type : Jar, dependsOn:['test'], description:'Jar all test artifacts') {
+   task jarTests(type : Jar, dependsOn:['test'], description:'Jar compiled test artifacts') {
       from sourceSets.test.output
+      from sourceSets.test.resources
       classifier "tests"
       destinationDir = localLib
       manifest = project.manifest {
@@ -65,13 +66,48 @@ subprojects {
       }
    }
 
-   task jarAll(type : Jar, dependsOn:['test'], description:'Jar both source and test artifacts') {
-      from sourceSets.test.output
-      from sourceSets.main.output
+   task jarAll(type : Jar, dependsOn:['test'], description:'Jar source and test artifacts') {
+      from sourceSets.main.allSource
+      from sourceSets.test.allSource
       classifier "all"
       destinationDir = localLib
       manifest = project.manifest {
          from sharedManifest
+      }
+   }
+   
+   task jarSources(type: Jar, dependsOn: classes, description:'Generate source artifacts') {
+      from sourceSets.main.allSource
+      classifier = 'sources'
+      destinationDir = localLib
+   }
+   
+   task jarJavadocs(type: Jar, dependsOn: javadoc, description:'Generate Javadoc artifacts') {
+      from javadoc.destinationDir
+      classifier = 'javadoc'
+      destinationDir = localLib
+   }
+   
+   /**
+    * Add additional artifacts.
+    */
+   artifacts {
+      archives jar
+      archives jarTests
+      archives jarAll
+      archives jarSources
+      archives jarJavadocs
+   }
+   
+   /**
+    * Override to clean up additional artifacts
+    */
+   cleanAll {
+      doLast {
+         delete jarAll.archivePath
+         delete jarTests.archivePath
+         delete jarSources.archivePath
+         delete jarJavadocs.archivePath
       }
    }
 }
