@@ -134,12 +134,20 @@ allprojects {
          archives jar
          archives jarSources
       }
+      
+      task cleanAll(description: 'Clean all artifacts created by this project build') {
+         doLast {
+            delete rootProject.rootLib
+         }
+      }
+      cleanAll.dependsOn 'clean'
    }
    
-
-   task cleanAll(description: 'Clean all artifacts created by this project build') {
-      doLast {
-         delete rootProject.rootLib
-      }
+   tasks.withType(Jar) {
+      destinationDir = rootLib
+   }
+   
+   tasks.withType(Zip) {
+      destinationDir = rootLib
    }
 }
